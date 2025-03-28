@@ -1,7 +1,17 @@
     #vis svg {
         margin: 2rem 0;
-        border: 1px solid #ccc; /*otherwise you can't see this part*/
-        background-color: #f0f0f0; /* Add this to make SVG visible */
+        border: 1px solid #120d0d; /*otherwise you can't see this part*/
+        background-color: #b4ea1150; /* Add this to make SVG visible */
+    }
+    #vis2 svg {
+        margin: 2rem 0;
+        border: 1px solid #120d0d; /*otherwise you can't see this part*/
+        background-color: #b4ea1150; /* Add this to make SVG visible */
     }
 
+    #vis3 svg {
+        margin: 2rem 0;
+        border: 1px solid #120d0d; /*otherwise you can't see this part*/
+        background-color: #b4ea1150; /* Add this to make SVG visible */
+    }
   
