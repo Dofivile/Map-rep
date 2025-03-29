@@ -1,17 +1,29 @@
-    #vis svg {
+#vis svg {
         margin: 2rem 0;
         border: 1px solid #120d0d; /*otherwise you can't see this part*/
         background-color: #b4ea1150; /* Add this to make SVG visible */
     }
     #vis2 svg {
         margin: 2rem 0;
-        border: 1px solid #120d0d; /*otherwise you can't see this part*/
-        background-color: #b4ea1150; /* Add this to make SVG visible */
+        border: 1px solid #00000005; /*otherwise you can't see this part*/
+        background-color: #0e4229c3; /* Add this to make SVG visible */
     }
 
-    #vis3 svg {
-        margin: 2rem 0;
-        border: 1px solid #120d0d; /*otherwise you can't see this part*/
-        background-color: #b4ea1150; /* Add this to make SVG visible */
-    }
-  
+#stateSelector {
+    padding: 1rem 0;
+    border-top: 1px solid #ce1b1b;
+    margin-top: 1rem;
+}
+
+.form-check {
+    margin-bottom: 10px;
+}
+
+path {
+  pointer-events: none;
+}
+
+.transitioning {
+  cursor: wait;
+}
+
