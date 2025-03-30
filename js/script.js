@@ -1,154 +1,146 @@
-function createVis(polygon) {
-  const width = 960;
-  const height = 500;
+var svg = d3.select("#vis svg"),
+    path = svg.append("path");
 
-  const projection = d3.geoAlbers()
-    .rotate([120, 0])
-    .center([0, 37.7])
-    .scale(2700);
+var currentState = null;
 
-  const svg = d3.select("#vis")
-    .append("svg")
-    .attr("width", width)
-    .attr("height", height)
-    .attr("viewBox", [0, 0, width, height])
-    .attr("style", "max-width: 100%; height: auto;");
+// Complete state color mapping with lighter shades
+var stateColors = {
+    // Pacific Coast
+    'CA': '#FFD580', // Light orange
+    'OR': '#98FB98', // Light forest green
+    'WA': '#90EE90', // Light green
 
-  const path = svg.append("path")
-    .attr("fill", "#ccc")
-    .attr("stroke", "#333");
+    // Southwest
+    'AZ': '#E9967A', // Light terracotta
+    'NM': '#F08080', // Light coral red
+    'NV': '#F5DEB3', // Wheat/light tan
+    'TX': '#FFE4B5', // Light peach/moccasin
 
-  const coordinates0 = polygon.coordinates[0].map(projection);
-  const coordinates1 = circle(coordinates0);
-  const d0 = "M" + coordinates0.join("L") + "Z";
-  const d1 = "M" + coordinates1.join("L") + "Z";
+    // Northeast
+    'NY': '#B0C4DE', // Light steel blue
+    'MA': '#ADD8E6', // Light blue
+    'CT': '#B0E0E6', // Powder blue
+    'RI': '#87CEEB', // Sky blue
+    'NJ': '#C0C0C0', // Silver
+    'ME': '#E0FFFF', // Light cyan
+    'VT': '#98FB98', // Light green
+    'NH': '#B0E0E6', // Powder blue
+    'PA': '#D3D3D3', // Light gray
 
-  loop();
+    // Midwest
+    'IA': '#FFF68F', // Light khaki/corn
+    'KS': '#FAFAD2', // Light goldenrod
+    'NE': '#FFFACD', // Lemon chiffon
+    'IL': '#90EE90', // Light green
+    'IN': '#98FB98', // Pale green
+    'OH': '#DEB887', // Light brown/burlywood
+    'MI': '#87CEEB', // Sky blue
+    'WI': '#DEB887', // Light brown/burlywood
+    'MN': '#98FB98', // Pale green
+    'MO': '#F0E68C', // Light khaki
+    'SD': '#F5DEB3', // Wheat
+    'ND': '#F5F5DC', // Beige
 
-  async function loop() {
-    await path
-      .attr("d", d0)
-      .transition()
-      .duration(5000)
-      .attr("d", d1)
-      .transition()
-      .delay(5000)
-      .attr("d", d0)
-      .end();
-    requestAnimationFrame(loop);
-  }
-}
+    // South/Southeast
+    'FL': '#AFEEEE', // Pale turquoise
+    'GA': '#FFDAB9', // Peachpuff
+    'AL': '#DEB887', // Light brown/burlywood
+    'MS': '#D2B48C', // Tan
+    'LA': '#E6E6FA', // Lavender
+    'SC': '#FFE4B5', // Moccasin
+    'NC': '#F0FFF0', // Honeydew
+    'TN': '#FFF0F5', // Lavender blush
+    'KY': '#F5F5DC', // Beige
+    'WV': '#E0FFFF', // Light cyan
+    'VA': '#E6E6FA', // Lavender
+    'AR': '#DEB887', // Light brown/burlywood
+    'OK': '#FFE4B5', // Moccasin
 
-function circle(coordinates) {
-  const circle = [];
-  let length = 0;
-  const lengths = [length];
-  let p0 = coordinates[0];
-  let p1, x, y, i = 0;
-  const n = coordinates.length;
+    // Mountain States
+    'CO': '#B0E0E6', // Powder blue
+    'MT': '#98FB98', // Pale green
+    'UT': '#FFA07A', // Light salmon
+    'ID': '#E0FFFF', // Light cyan
+    'WY': '#F5DEB3', // Wheat
+    'NM': '#FFB6C1', // Light pink
 
-  while (++i < n) {
-    p1 = coordinates[i];
-    x = p1[0] - p0[0];
-    y = p1[1] - p0[1];
-    lengths.push((length += Math.sqrt(x * x + y * y)));
-    p0 = p1;
-  }
+    // Capital & Nearby
+    'DC': '#B0C4DE', // Light steel blue
+    'MD': '#E6E6FA', // Lavender
+    'DE': '#E0FFFF', // Light cyan
 
-  const area = d3.polygonArea(coordinates);
-  const radius = Math.sqrt(Math.abs(area) / Math.PI);
-  const centroid = d3.polygonCentroid(coordinates);
-  const angleOffset = -Math.PI / 2;
-  const k = (2 * Math.PI) / lengths[lengths.length - 1];
+    // Alaska & Hawaii (if included)
+    'AK': '#E0FFFF', // Light cyan
+    'HI': '#98FF98', // Mint green
 
-  i = -1;
-  while (++i < n) {
-    const angle = angleOffset + lengths[i] * k;
-    circle.push([
-      centroid[0] + radius * Math.cos(angle),
-      centroid[1] + radius * Math.sin(angle)
-    ]);
-  }
+    // Default color for any missing states
+    'default': '#F5F5F5' // White smoke
+};
 
-  return circle;
-}
+d3.json("data/states.json", function(err, topo) {
+  if (err) throw err;
+  
+  // Get states with their IDs and coordinates
+  var states = topojson.feature(topo, topo.objects.states)
+    .features.map(function(d) {
+      return {
+        id: d.id,
+        coordinates: d.geometry.coordinates[0],
+        color: stateColors[d.id] || stateColors.default // Add color property
+      };
+    });
 
+  // Create radio buttons for each state
+  var controls = d3.select("#stateControls");
+  
+  states.forEach(function(state) {
+    var formCheck = controls.append("div")
+      .attr("class", "form-check me-4 mb-2");
 
-function handleMultiPolygon(geometryCollection) {
-  const width = 960;
-  const height = 500;
+    var input = formCheck.append("input")
+      .attr("class", "form-check-input")
+      .attr("type", "radio")
+      .attr("name", "stateRadio")
+      .attr("id", state.id.toLowerCase())
+      .attr("value", state.id)
+      .on("change", function() {
+        morphToState(state);
+      });
 
-  // the rest of the code is good just make sure to change the projection to the one you want
-  const projection = d3.geoAlbers()
-  .rotate([120, 0])     // Washington is around 120°W longitude
-  .center([0, 47])      // Washington is around 47°N latitude
-  .scale(4000);         // Adjust scale for Washington's size
+    formCheck.append("label")
+      .attr("class", "form-check-label")
+      .attr("for", state.id.toLowerCase())
+      .text(state.id);
 
-  const svg = d3.select("#vis2")
-    .append("svg")
-    .attr("width", width)
-    .attr("height", height)
-    .attr("viewBox", [0, 0, width, height])
-    .attr("style", "max-width: 100%; height: auto;");
-    
-
-  const path = svg.append("path")
-    .attr("fill", "#ccc")
-    .attr("stroke", "#333");
-
-  // Access the first geometry in the GeometryCollection
-  if (geometryCollection.geometries && geometryCollection.geometries.length > 0) {
-    const geometry = geometryCollection.geometries[0]; // Get the first geometry
-
-    if (geometry.type === "MultiPolygon") {
-      const coordinates0 = geometry.coordinates[0][0].map(projection);
-      const coordinates1 = circle(coordinates0);
-      const d0 = "M" + coordinates0.join("L") + "Z";
-      const d1 = "M" + coordinates1.join("L") + "Z";
-
-      loop();
-
-      async function loop() {
-        await path
-          .attr("d", d0)
-          .transition()
-          .duration(5000)
-          .attr("d", d1)
-          .transition()
-          .delay(5000)
-          .attr("d", d0)
-          .end();
-        requestAnimationFrame(loop);
-      }
-    } else {
-      console.error("Unsupported geometry type:", geometry.type);
+    // Set the first state as checked
+    if (states.indexOf(state) === 0) {
+      input.attr("checked", true);
     }
-  } else {
-    console.error("No geometries found in the GeometryCollection.");
+  });
+
+  // Set initial state
+  currentState = states[0];
+  path.attr("d", createPathFromCoordinates(currentState.coordinates))
+      .style("fill", currentState.color); // Set initial color
+
+  function morphToState(targetState) {
+    if (!currentState) return;
+    
+    var interpolator = flubber.interpolate(
+      currentState.coordinates,
+      targetState.coordinates
+    );
+
+    path.transition()
+      .duration(800)
+      .attrTween("d", function() { return interpolator; })
+      .style("fill", targetState.color) // Transition the color
+      .on("end", function() {
+        currentState = targetState;
+      });
   }
-}
 
-function init() {
-  d3.json("./data/california.json").then(data => {
-      console.log(data);
-      createVis(data);
-  })
-  .catch(error => console.error('Error loading data:', error));
-
-  d3.json("./data/maryland.json")
-  .then(data => {
-    console.log("Maryland Data:", data); // Log the data to inspect its structure
-    handleMultiPolygon(data);
-  })
-  .catch(error => console.error('Error loading multipolygon.json:', error));
-
-  d3.json("./data/washington.json")
-  .then(data => {
-    console.log("washington Data:", data); // Log the data to inspect its structure
-    handleMultiPolygon(data);
-  })
-  .catch(error => console.error('Error loading multipolygon.json:', error));
-}
-
-window.addEventListener('load', init);
-
+  function createPathFromCoordinates(coordinates) {
+    return d3.line()(coordinates);
+  }
+});
