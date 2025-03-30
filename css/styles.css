@@ -1,29 +1,39 @@
 #vis svg {
-        margin: 2rem 0;
-        border: 1px solid #120d0d; /*otherwise you can't see this part*/
-        background-color: #b4ea1150; /* Add this to make SVG visible */
-    }
-    #vis2 svg {
-        margin: 2rem 0;
-        border: 1px solid #00000005; /*otherwise you can't see this part*/
-        background-color: #0e4229c3; /* Add this to make SVG visible */
-    }
+    margin: 2rem 0;
+    border: 1px solid #120d0d;
+    background-color: #000000d7;
+}
 
-#stateSelector {
-    padding: 1rem 0;
-    border-top: 1px solid #ce1b1b;
-    margin-top: 1rem;
+
+
+path {
+    stroke-width: 1px;
+    stroke: #666;
+}
+
+.container {
+    padding: 2rem 0;
+}
+
+h1 {
+    text-align: center;
+    margin-bottom: 2rem;
 }
 
 .form-check {
-    margin-bottom: 10px;
+    margin: 0.5rem 1rem;
 }
 
-path {
-  pointer-events: none;
+.form-check-label {
+    cursor: pointer;
 }
 
-.transitioning {
-  cursor: wait;
+.controls {
+    margin: 20px;
 }
 
+.radio-group {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 10px;
+}

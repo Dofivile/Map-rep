@@ -1,272 +1,146 @@
-// Define projection configurations for different regions
-const projectionConfigs = {
-  california: {
-    type: 'albers',
-    rotate: [120, 0],
-    center: [0, 37.7],
-    scale: 2700
-  },
-  washington: {
-    type: 'albers',
-    rotate: [120, 0],
-    center: [0, 47],
-    scale: 4000
-  },
-  americanSamoa: {
-    type: 'mercator',
-    center: [-170.7, -14.3],
-    scale: 40000
-  },
-  alabama: {
-    type: 'albers',
-    rotate: [87, 0],  // Alabama's approximate central longitude
-    center: [0, 32.7], // Alabama's approximate central latitude
-    scale: 4500
-  },
-  alaska: {
-    type: 'mercator',
-    center: [-150, 62],
-    scale: 500
-  },
-  arizona: {
-    type: 'albers',
-    rotate: [112, 0],
-    center: [0, 34.2],
-    scale: 4000
-  },
-  arkansas: {
-    type: 'albers',
-    rotate: [92, 0],
-    center: [0, 34.8],
-    scale: 5000
-  },
-  colorado: {
-    type: 'albers',
-    rotate: [105.5, 0],
-    center: [0, 39],
-    scale: 4000
-  },
-  connecticut: {
-    type: 'albers',
-    rotate: [72.7, 0],
-    center: [0, 41.6],
-    scale: 14000
-  },
-  delaware: {
-    type: 'albers',
-    rotate: [75.5, 0],
-    center: [0, 39],
-    scale: 13000
-  },
-  florida: {
-    type: 'albers',
-    rotate: [83, 0],
-    center: [0, 28],
-    scale: 4000
-  },
-  georgia: {
-    type: 'albers',
-    rotate: [83.5, 0],
-    center: [0, 32.9],
-    scale: 5000
-  },
-  hawaii: {
-    type: 'mercator',
-    center: [-157.5, 20.0],
-    scale: 6000
-  },
+var svg = d3.select("#vis svg"),
+    path = svg.append("path");
 
+var currentState = null;
+
+// Complete state color mapping with lighter shades
+var stateColors = {
+    // Pacific Coast
+    'CA': '#FFD580', // Light orange
+    'OR': '#98FB98', // Light forest green
+    'WA': '#90EE90', // Light green
+
+    // Southwest
+    'AZ': '#E9967A', // Light terracotta
+    'NM': '#F08080', // Light coral red
+    'NV': '#F5DEB3', // Wheat/light tan
+    'TX': '#FFE4B5', // Light peach/moccasin
+
+    // Northeast
+    'NY': '#B0C4DE', // Light steel blue
+    'MA': '#ADD8E6', // Light blue
+    'CT': '#B0E0E6', // Powder blue
+    'RI': '#87CEEB', // Sky blue
+    'NJ': '#C0C0C0', // Silver
+    'ME': '#E0FFFF', // Light cyan
+    'VT': '#98FB98', // Light green
+    'NH': '#B0E0E6', // Powder blue
+    'PA': '#D3D3D3', // Light gray
+
+    // Midwest
+    'IA': '#FFF68F', // Light khaki/corn
+    'KS': '#FAFAD2', // Light goldenrod
+    'NE': '#FFFACD', // Lemon chiffon
+    'IL': '#90EE90', // Light green
+    'IN': '#98FB98', // Pale green
+    'OH': '#DEB887', // Light brown/burlywood
+    'MI': '#87CEEB', // Sky blue
+    'WI': '#DEB887', // Light brown/burlywood
+    'MN': '#98FB98', // Pale green
+    'MO': '#F0E68C', // Light khaki
+    'SD': '#F5DEB3', // Wheat
+    'ND': '#F5F5DC', // Beige
+
+    // South/Southeast
+    'FL': '#AFEEEE', // Pale turquoise
+    'GA': '#FFDAB9', // Peachpuff
+    'AL': '#DEB887', // Light brown/burlywood
+    'MS': '#D2B48C', // Tan
+    'LA': '#E6E6FA', // Lavender
+    'SC': '#FFE4B5', // Moccasin
+    'NC': '#F0FFF0', // Honeydew
+    'TN': '#FFF0F5', // Lavender blush
+    'KY': '#F5F5DC', // Beige
+    'WV': '#E0FFFF', // Light cyan
+    'VA': '#E6E6FA', // Lavender
+    'AR': '#DEB887', // Light brown/burlywood
+    'OK': '#FFE4B5', // Moccasin
+
+    // Mountain States
+    'CO': '#B0E0E6', // Powder blue
+    'MT': '#98FB98', // Pale green
+    'UT': '#FFA07A', // Light salmon
+    'ID': '#E0FFFF', // Light cyan
+    'WY': '#F5DEB3', // Wheat
+    'NM': '#FFB6C1', // Light pink
+
+    // Capital & Nearby
+    'DC': '#B0C4DE', // Light steel blue
+    'MD': '#E6E6FA', // Lavender
+    'DE': '#E0FFFF', // Light cyan
+
+    // Alaska & Hawaii (if included)
+    'AK': '#E0FFFF', // Light cyan
+    'HI': '#98FF98', // Mint green
+
+    // Default color for any missing states
+    'default': '#F5F5F5' // White smoke
 };
 
-function createMapVis(data, region, containerId) {
-  const width = 960;
-  const height = 500;
-
-  // Check if SVG exists
-  let svg = d3.select(`#${containerId}`).select("svg");
+d3.json("data/states.json", function(err, topo) {
+  if (err) throw err;
   
-  // Only create new SVG if it doesn't exist
-  if (svg.empty()) {
-    svg = d3.select(`#${containerId}`)
-      .append("svg")
-      .attr("width", width)
-      .attr("height", height)
-      .attr("viewBox", [0, 0, width, height])
-      .attr("style", "max-width: 100%; height: auto;");
-  }
-
-  // Create projection based on region configuration
-  const config = projectionConfigs[region];
-  let projection;
-  
-  if (config.type === 'albers') {
-    projection = d3.geoAlbers()
-      .rotate(config.rotate)
-      .center(config.center)
-      .scale(config.scale);
-  } else if (config.type === 'mercator') {
-    projection = d3.geoMercator()
-      .center(config.center)
-      .scale(config.scale);
-  }
-  
-  projection.translate([width / 2, height / 2]);
-
-  // Create path generator
-  const pathGenerator = d3.geoPath().projection(projection);
-
-  // Get or create path
-  let path = svg.select("path");
-  if (path.empty()) {
-    path = svg.append("path")
-      .attr("fill", "#ccc")
-      .attr("stroke", "#333")
-      .attr("stroke-width", 1)
-      .attr("d", ""); // Initialize with empty path
-  }
-
-  // Extract geometry from GeoJSON data
-  const geometry = data.type === 'Feature' ? data.geometry : data;
-
-  // Handle GeometryCollection
-  let workingGeometry;
-  if (geometry.type === 'GeometryCollection') {
-    // Use the first geometry in the collection
-    workingGeometry = geometry.geometries[0];
-    console.log('Working with first geometry from collection:', workingGeometry);
-    console.log('GeometryCollection contents:', geometry.geometries);
-  } else {
-    workingGeometry = geometry;
-  }
-
-  // Add validation for geometry
-  if (!workingGeometry || !workingGeometry.coordinates) {
-    console.log('Debug - received data:', data);
-    console.log('Debug - extracted geometry:', workingGeometry);
-    console.error('Invalid geometry data - missing coordinates');
-    return;
-  }
-
-  // Get coordinates with validation
-  let coordinates;
-  try {
-    // Check geometry type and handle accordingly
-    switch (workingGeometry.type) {
-      case 'MultiPolygon':
-        coordinates = workingGeometry.coordinates[0][0];
-        break;
-      case 'Polygon':
-        coordinates = workingGeometry.coordinates[0];
-        break;
-      default:
-        console.error('Unsupported geometry type:', workingGeometry.type);
-        return;
-    }
-
-    // Validate coordinates
-    if (!coordinates || !coordinates.length) {
-      console.error('Empty coordinates array');
-      return;
-    }
-
-  } catch (error) {
-    console.error('Error accessing coordinates:', error);
-    console.log('Geometry structure:', workingGeometry);
-    return;
-  }
-
-  // Generate path data with validation
-  let d0;
-  try {
-    // Use the original geometry for path generation
-    d0 = pathGenerator(geometry);
-    if (!d0) {
-      console.error('Path generator returned null');
-      return;
-    }
-    console.log('Generated path data:', d0);
-  } catch (error) {
-    console.error('Error generating path:', error);
-    return;
-  }
-
-  // Handle the transition
-  const currentPath = path.attr("d");
-  const newPath = d0;
-
-  console.log('Transition debug:', {
-    containerId,
-    region,
-    hasCurrentPath: !!currentPath,
-    hasNewPath: !!newPath,
-    currentPathStart: currentPath?.substring(0, 50),
-    newPathStart: newPath?.substring(0, 50)
-  });
-
-  // For initial render (no previous path)
-  if (!currentPath || currentPath === "") {
-    console.log('Initial render - no transition needed');
-    path.attr("d", newPath);
-    return;
-  }
-
-  // For transitions between states using Flubber
-  console.log('Starting Flubber transition');
-  path.transition()
-    .duration(2000)
-    .attrTween("d", function() {
-      try {
-        // This is where we actually use Flubber
-        const interpolator = flubber.interpolate(currentPath, newPath, {
-          maxSegmentLength: 2,  // Lower number = smoother transition
-          string: true
-        });
-        return interpolator;
-      } catch (error) {
-        console.error('Flubber interpolation error:', error);
-        // Fallback to direct transition if Flubber fails
-        return d3.interpolateString(currentPath, newPath);
-      }
+  // Get states with their IDs and coordinates
+  var states = topojson.feature(topo, topo.objects.states)
+    .features.map(function(d) {
+      return {
+        id: d.id,
+        coordinates: d.geometry.coordinates[0],
+        color: stateColors[d.id] || stateColors.default // Add color property
+      };
     });
 
-  console.log('Transition setup complete');
-}
- 
-function init() {
-  // Debug logging for data loading
-  d3.json("./data/california.json").then(data => {
-      console.log('California data structure:', data);
-      createMapVis(data, 'california', 'vis');
-  }).catch(error => {
-      console.error('Error loading California data:', error);
-      console.log('Stack trace:', error.stack);
+  // Create radio buttons for each state
+  var controls = d3.select("#stateControls");
+  
+  states.forEach(function(state) {
+    var formCheck = controls.append("div")
+      .attr("class", "form-check me-4 mb-2");
+
+    var input = formCheck.append("input")
+      .attr("class", "form-check-input")
+      .attr("type", "radio")
+      .attr("name", "stateRadio")
+      .attr("id", state.id.toLowerCase())
+      .attr("value", state.id)
+      .on("change", function() {
+        morphToState(state);
+      });
+
+    formCheck.append("label")
+      .attr("class", "form-check-label")
+      .attr("for", state.id.toLowerCase())
+      .text(state.id);
+
+    // Set the first state as checked
+    if (states.indexOf(state) === 0) {
+      input.attr("checked", true);
+    }
   });
 
-  // Load and display Alabama in second vis initially
-  d3.json("./data/alabama.json").then(data => {
-      createMapVis(data, 'alabama', 'vis2');
-  }).catch(error => console.error('Error loading Alabama data:', error));
+  // Set initial state
+  currentState = states[0];
+  path.attr("d", createPathFromCoordinates(currentState.coordinates))
+      .style("fill", currentState.color); // Set initial color
 
-  // Add event listener for radio buttons
-  document.getElementById('stateSelector').addEventListener('change', (event) => {
-    const selectedState = event.target.value;
-    console.log('Radio button changed to:', selectedState); // Debug selected state
+  function morphToState(targetState) {
+    if (!currentState) return;
+    
+    var interpolator = flubber.interpolate(
+      currentState.coordinates,
+      targetState.coordinates
+    );
 
-    // Disable radio buttons during transition to prevent multiple triggers
-    const radioButtons = document.querySelectorAll('#stateSelector input[type="radio"]');
-    radioButtons.forEach(button => button.disabled = true);
+    path.transition()
+      .duration(800)
+      .attrTween("d", function() { return interpolator; })
+      .style("fill", targetState.color) // Transition the color
+      .on("end", function() {
+        currentState = targetState;
+      });
+  }
 
-    d3.json(`./data/${selectedState}.json`)
-        .then(data => {
-            console.log('Successfully loaded data for:', selectedState, data); // Debug data loading
-            createMapVis(data, selectedState, 'vis2');
-        })
-        .catch(error => {
-            console.error(`Error loading ${selectedState} data:`, error);
-        })
-        .finally(() => {
-            // Re-enable radio buttons after transition
-            radioButtons.forEach(button => button.disabled = false);
-        });
-  });
-}
+  function createPathFromCoordinates(coordinates) {
+    return d3.line()(coordinates);
+  }
+});
